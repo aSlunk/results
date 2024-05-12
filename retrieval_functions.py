@@ -246,13 +246,33 @@ def get_bandwidth(data):
                     labels.append(data[i]['framework'][0]+ " " + protocol)
     return x_values,y_values,labels
 
+def get_input_deviation(data):
+    ret = []
+    label=[]
+    for i in range(len(data)):
+        framework = data[i]['framework'].iloc[0]
+        
+        if framework == "HPMPC" or framework == "mp-slice":
+            for function in data[i]['function'].unique():
+                function_filter = data[i]['function'] == function
+                help = data[i].loc[function_filter & (data[i]['preprocess'] == 0)]
+                ret.append(get_mean_std(help,'input_size')) 
+                label.append(framework+ str(function))
+        else:
+            for protocol in data[i]['protocol'].unique():
+                for input_size in data[i]['input_size'].unique():
+                    protocol_filter = data[i]['protocol'] == protocol
+                    help = data[i].loc[protocol_filter & (data[i]['input_size'] == input_size)]
+                    ret.append(get_mean_std(help,'latencies(ms)')) 
+                    label.append("MOTION "+ protocol)
+    return ret,label
 
 def get_latency_deviation(data):
     ret = []
     label=[]
     for i in range(len(data)):
         framework = data[i]['framework'].iloc[0]
-        bandwidth_filter = (data[i]['bandwidths(Mbs)'] == 25000) & (data[i]['packetdrops(%)'] == 0)
+        bandwidth_filter = (data[i]['packetdrops(%)'] == 0) & ((data[i]['bandwidths(Mbs)'] == 25000) | (data[i]['bandwidths(Mbs)'] == 0))
         
         if framework == "HPMPC" or framework == "mp-slice":
             for function in data[i]['function'].unique():
@@ -260,7 +280,7 @@ def get_latency_deviation(data):
                     function_filter = data[i]['function'] == function
                     help = data[i].loc[bandwidth_filter & function_filter & (data[i]['input_size'] == input_size) & (data[i]['preprocess'] == 0)]
                     ret.append(get_mean_std(help,'latencies(ms)')) 
-                    label.append(framework+ str(function) + " "+ str(input_size))
+                    label.append(framework+ str(function) + " " + str(input_size))
         elif framework == "MPyC":
             help = data[i].loc[bandwidth_filter]
             ret.append(get_mean_std(help,'latencies(ms)'))
@@ -269,6 +289,7 @@ def get_latency_deviation(data):
             for protocol in data[i]['protocol'].unique():
                 for input_size in data[i]['input_size'].unique():
                     protocol_filter = data[i]['protocol'] == protocol
+                    print(input_size)
                     help = data[i].loc[bandwidth_filter & protocol_filter & (data[i]['input_size'] == input_size)]
                     ret.append(get_mean_std(help,'latencies(ms)')) 
                     label.append("MP-SPDZ "+ protocol + " " + str(input_size))
@@ -282,6 +303,7 @@ def get_latency_deviation(data):
     return ret,label
 
 def get_mean_std(data,column):
+    print(f"min {data.groupby([column])['runtime_external(s)'].mean()}")
     mean = data.groupby([column])['runtime_external(s)'].mean()
     std = data.groupby([column])['runtime_external(s)'].std()
     mean.name = 'mean'
@@ -295,7 +317,7 @@ def get_bandwidth_deviation(data):
     label=[]
     for i in range(len(data)):
         framework = data[i]['framework'].iloc[0]
-        bandwidth_filter = (data[i]['latencies(ms)'] == 0) & (data[i]['packetdrops(%)'] == 0)
+        bandwidth_filter = (data[i]['packetdrops(%)'] == 0) & (data[i]['latencies(ms)'] == 0)
         
         if framework == "HPMPC" or framework == "mp-slice":
             for function in data[i]['function'].unique():
@@ -304,14 +326,15 @@ def get_bandwidth_deviation(data):
                 ret.append(get_mean_std(help,'bandwidths(Mbs)'))
                 label.append(framework + " " + str(function))
         elif framework == "MPyC":
-            help = data[i].loc[bandwidth_filter]
+            help = data[i].loc[(data[i]['packetdrops(%)'] == 0) & (data[i]['latencies(ms)'] == 0)]
             ret.append(get_mean_std(help,'bandwidths(Mbs)'))
             label.append("MPyC")
         elif framework == "MP-SPDZ":
             for protocol in data[i]['protocol'].unique():
                 for input_size in data[i]['input_size'].unique():
+                    print(input_size)
                     protocol_filter = data[i]['protocol'] == protocol
-                    help = data[i].loc[bandwidth_filter & protocol_filter & (data[i]['input_size'] == input_size)]
+                    help = data[i].loc[(data[i]['packetdrops(%)'] == 0) & (data[i]['latencies(ms)'] == 0) & protocol_filter & (data[i]['input_size'] == input_size)]
                     ret.append(get_mean_std(help,'bandwidths(Mbs)'))
                     label.append("MP-SPDZ "+ protocol+" "+str(input_size))
         else:
@@ -331,7 +354,7 @@ def get_packetdrop_deviation(data):
         
         if framework == "HPMPC" or framework == "mp-slice":
             for function in data[i]['function'].unique():
-                help = data[i].loc[(data[i]['latencies(ms)'] == 0) & (data[i]['function'] == function) & (data[i]['preprocess'] == 0) & (data[i]['bandwidths(Mbs)'] == 25000)]
+                help = data[i].loc[(data[i]['latencies(ms)'] == 0) & (data[i]['function'] == function) & (data[i]['preprocess'] == 0) & ((data[i]['bandwidths(Mbs)'] == 25000) | (data[i]['bandwidths(Mbs)'] == 0))]
                 ret.append(get_mean_std(help,'packetdrops(%)'))
                 label.append(framework + " passive adversary "+ str(function))
         elif framework == "MPyC":
