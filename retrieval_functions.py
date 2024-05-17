@@ -267,12 +267,33 @@ def get_input_deviation(data):
                     label.append("MOTION "+ protocol)
     return ret,label
 
+def get_input_deviation_ram(data):
+    ret = []
+    label=[]
+    for i in range(len(data)):
+        framework = data[i]['framework'].iloc[0]
+        
+        if framework == "HPMPC" or framework == "mp-slice":
+            for function in data[i]['function'].unique():
+                function_filter = data[i]['function'] == function
+                help = data[i].loc[function_filter & (data[i]['preprocess'] == 0)]
+                ret.append(get_mean_std_ram(help,'input_size')) 
+                label.append(framework+ str(function))
+        else:
+            for protocol in data[i]['protocol'].unique():
+                for input_size in data[i]['input_size'].unique():
+                    protocol_filter = data[i]['protocol'] == protocol
+                    help = data[i].loc[protocol_filter & (data[i]['input_size'] == input_size)]
+                    ret.append(get_mean_std(help,'latencies(ms)')) 
+                    label.append("MOTION "+ protocol)
+    return ret,label
+
 def get_latency_deviation(data):
     ret = []
     label=[]
     for i in range(len(data)):
         framework = data[i]['framework'].iloc[0]
-        bandwidth_filter = (data[i]['packetdrops(%)'] == 0) & ((data[i]['bandwidths(Mbs)'] == 25000) | (data[i]['bandwidths(Mbs)'] == 0))
+        bandwidth_filter =  (data[i]['packetdrops(%)'] == 0) & ((data[i]['bandwidths(Mbs)'] == 25000) | (data[i]['bandwidths(Mbs)'] == 0))
         
         if framework == "HPMPC" or framework == "mp-slice":
             for function in data[i]['function'].unique():
@@ -303,9 +324,19 @@ def get_latency_deviation(data):
     return ret,label
 
 def get_mean_std(data,column):
-    print(f"min {data.groupby([column])['runtime_external(s)'].mean()}")
+    print(f"mean {data.groupby([column])['runtime_external(s)'].mean()}")
     mean = data.groupby([column])['runtime_external(s)'].mean()
     std = data.groupby([column])['runtime_external(s)'].std()
+    mean.name = 'mean'
+    std.name = 'std'
+    help_dev = pd.concat([mean, std], axis=1)
+    help_dev[column] = help_dev.index
+    return help_dev
+
+def get_mean_std_ram(data,column):
+    print(f"mean {data.groupby([column])['peakRAM(MiB)'].mean()}")
+    mean = data.groupby([column])['peakRAM(MiB)'].mean()
+    std = data.groupby([column])['peakRAM(MiB)'].std()
     mean.name = 'mean'
     std.name = 'std'
     help_dev = pd.concat([mean, std], axis=1)
