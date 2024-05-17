@@ -140,7 +140,7 @@ def plot_deviation(data,labels,file_path,experiment,x_axis,y_axis,log=False,x_ti
     ax.grid(True, which='major', axis='y', linestyle='--', color='lightgray')
     #plt.tick_params(axis='y', which='both', right=True, left=True, labelright=True)
     fig.tight_layout()
-    plt.savefig(file_path,dpi=300,bbox_inches='tight')
+    # plt.savefig(file_path,dpi=300,bbox_inches='tight')
     plt.show()
 
 def basic_bar_plot(y_values,labels,experiment, titel, y_label):
